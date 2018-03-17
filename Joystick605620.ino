@@ -12,13 +12,13 @@ int JOYX_PIN            = A0;
 int JOYY_PIN            = A1;
 int JOYZ_PIN            = A2;
 
-/* data value variables */
+/* variable declaration that holds data value */
 int X_val               = 0;
 int Y_val               = 0;
 int Z_val               = 0;
 int pushState           = 0;
 
-char cmd[4];                        // array that holds command for two or more commands
+char cmd[4];                        // array that holds command or a combination of two or more commands
 int middlePoint         = 1023 / 2; // 1023 is the default max value of analog
 int wiperMiddlePoint    = 512 / 2;  // result will be the middle point of wiper, which added/subtracted by the wiper threshold
 int wiperThreshold      = 180;      // it helps reading sensitivity of the Z-axis/Wiper
