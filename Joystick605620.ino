@@ -1,110 +1,130 @@
-int ledPin          = 13;                 //
-int joyPinButton    = 4;                  // push button
-int joyPinX         = A0;                 // slider variable connecetd to analog pin 0
-int joyPinY         = A1;                 // slider variable connecetd to analog pin 1
-int joyPinZ         = A2;                 // slider variable connecetd to analog pin 2
-int X_val           = 0;                  // variable to read the value from the analog pin 0
-int Y_val           = 0;                  // variable to read the value from the analog pin 1
-int Z_val           = 0;                  // variable to read the value from the analog pin 2
+/* output and input pins */
+int LED_FORWARD         = 11;
+int LED_BACKWARD        = 10;
+int LED_LEFT            = 9;
+int LED_RIGHT           = 8;
+int LED_WIPE_LEFT       = 7;
+int LED_WIPE_RIGHT      = 6;
+int LED_PUSH            = 5;
 
-int leftPWM = 5;
-int rightPWM = 6;
-int forwPWM = 9;
-int backPWM = 10;
+int PUSH_PIN            = 4;
+int JOYX_PIN            = A0;
+int JOYY_PIN            = A1;
+int JOYZ_PIN            = A2;
 
-boolean forward = false;
-boolean left = false;
+/* data value variables */
+int X_val               = 0;
+int Y_val               = 0;
+int Z_val               = 0;
+int pushState           = 0;
 
-boolean enableForward = false;
-boolean enableLeft = false;
-
-int middlePoint = 1023 / 2;
-int threshold = 60; // it helps reading sensitivity
+char cmd[4];                        // array that holds command for two or more commands
+int middlePoint         = 1023 / 2; // 1023 is the default max value of analog
+int wiperMiddlePoint    = 512 / 2;  // result will be the middle point of wiper, which added/subtracted by the wiper threshold
+int wiperThreshold      = 180;      // it helps reading sensitivity of the Z-axis/Wiper
+int axisThreshold       = 80;       // it helps reading sensitivity X & Y axis
 
 void setup() {
   Serial.begin(9600);
+  pinMode(JOYX_PIN, INPUT);
+  pinMode(JOYY_PIN, INPUT);
+  pinMode(JOYZ_PIN, INPUT);
+  pinMode(PUSH_PIN, INPUT);
 
-  pinMode(joyPinButton, INPUT);
-  pinMode(joyPinX, INPUT);
-  pinMode(joyPinY, INPUT);
-  pinMode(joyPinZ, INPUT);
-
-  pinMode(leftPWM, OUTPUT);
-  pinMode(rightPWM, OUTPUT);
-  pinMode(forwPWM, OUTPUT);
-  pinMode(backPWM, OUTPUT);
+  pinMode(LED_FORWARD, OUTPUT);
+  pinMode(LED_BACKWARD, OUTPUT);
+  pinMode(LED_LEFT, OUTPUT);
+  pinMode(LED_RIGHT, OUTPUT);
+  pinMode(LED_WIPE_LEFT, OUTPUT);
+  pinMode(LED_WIPE_RIGHT, OUTPUT);
+  pinMode(LED_PUSH, OUTPUT);
 }
-
-int treatValue(int data) {
-  return (data * 9 / 1024) + 48;
-}
-
 void loop() {
-  // reads the value of the potentiometer
-  int state = digitalRead(joyPinButton);
-  X_val = analogRead(joyPinX);
-  Y_val = analogRead(joyPinY);
-  Z_val = analogRead(joyPinZ);
-  /*
-    Serial.print(state); Serial.print('\t');
-    Serial.print(Z_val); Serial.print('\t');
-    if (X_val > (middlePoint + threshold) || X_val < (middlePoint - threshold)) {
-      if (X_val > (middlePoint + threshold)) {
-        digitalWrite(leftPWM, HIGH);
-        Serial.print("LEFT: ");
-        Serial.print(X_val); Serial.print("\t");
-        Serial.print((middlePoint + threshold));
-      } else {
-        digitalWrite(rightPWM, HIGH);
-        Serial.print("RIGHT: ");
-        Serial.print(X_val); Serial.print("\t");
-        Serial.print((middlePoint - threshold));
-      }
-    } else {
-      digitalWrite(leftPWM, LOW);
-      digitalWrite(rightPWM, LOW);
-    }
-    if (Y_val > (middlePoint + threshold) || Y_val < (middlePoint - threshold)) {
-      if (Y_val > (middlePoint + threshold)) {
-        digitalWrite(forwPWM, HIGH);
-        Serial.print("FORWARD: ");
-        Serial.print(Y_val); Serial.print("\t");
-        Serial.print((middlePoint + threshold));
-      } else {
-        digitalWrite(backPWM, HIGH);
-        Serial.print("BACKWARD: ");
-        Serial.print(Y_val); Serial.print("\t");
-        Serial.print((middlePoint - threshold));
-      }
-    } else {
-      digitalWrite(forwPWM, LOW);
-      digitalWrite(backPWM, LOW);
-    }
-    Serial.println();
-  */
-  if (X_val > (middlePoint + threshold) || X_val < (middlePoint - threshold)) {
-    if (X_val > (middlePoint + threshold)) {
-      Serial.print("L"); Serial.print('\t');
-    } else {
-      Serial.print("R"); Serial.print('\t');
-    }
+  turn_off();
+
+  X_val = analogRead(JOYX_PIN);
+  Y_val = analogRead(JOYY_PIN);
+  Z_val = analogRead(JOYZ_PIN);
+  pushState = digitalRead(PUSH_PIN);
+
+  if (Y_val > (middlePoint + axisThreshold) || Y_val < (middlePoint - axisThreshold)) {
+    cmd[0] = (Y_val > (middlePoint + axisThreshold))  ? 'F' : 'B';
   } else {
-
+    cmd[0] = 0;
   }
-  if (Y_val > (middlePoint + threshold) || Y_val < (middlePoint - threshold)) {
-    if (Y_val > (middlePoint + threshold)) {
-      Serial.print("F"); Serial.print('\t');
-    } else {
-      Serial.print("B"); Serial.print('\t');
-    }
+  if (X_val > (middlePoint + axisThreshold) || X_val < (middlePoint - axisThreshold)) {
+    cmd[1] = (X_val > (middlePoint + axisThreshold)) ? 'L' : 'R';
   } else {
-
+    cmd[1] = 0;
   }
-  //Serial.print(X_val); Serial.print('\t');
-  //Serial.print(Y_val); Serial.print('\t');
-  Serial.print(Z_val); Serial.print('\t');
-  Serial.print(state); Serial.print('\t');
-  Serial.println();
-
-  delay(100);
+  command();
 }
+void command() {
+  String cmds;
+  for (int i = 0; i < 2; i++) {
+    char c = cmd[i];
+    if (c != NULL && c != '\0') {
+      cmds += c;
+    }
+  }
+  // check if commands is not empty
+  if (cmds != NULL && cmds != '\0') {
+    Serial.println(cmds);
+    if (cmds == "F") {
+      turn_on(LED_FORWARD);
+    } else if (cmds == "B") {
+      turn_on(LED_BACKWARD);
+    } else if (cmds == "L") {
+      turn_on(LED_LEFT);
+    } else if (cmds == "R") {
+      turn_on(LED_RIGHT);
+    } else if (cmds == "FR") {
+      turn_on(LED_FORWARD);
+      turn_on(LED_RIGHT);
+    } else if (cmds == "FL") {
+      turn_on(LED_FORWARD);
+      turn_on(LED_LEFT);
+    } else if (cmds == "BL") {
+      turn_on(LED_BACKWARD);
+      turn_on(LED_LEFT);
+    } else if (cmds == "BR") {
+      turn_on(LED_BACKWARD);
+      turn_on(LED_RIGHT);
+    } else {
+      turn_off();
+    }
+  } else {
+    /* if no direction command to transmit then let's check the wiper command*/
+    if (Z_val > (wiperMiddlePoint + wiperThreshold) || Z_val < (wiperMiddlePoint - wiperThreshold)) {
+      if (Z_val > (wiperMiddlePoint + wiperThreshold)) {
+        turn_on(LED_WIPE_RIGHT);
+      } else if (Z_val < (wiperMiddlePoint - wiperThreshold)) {
+        turn_on(LED_WIPE_LEFT);
+      } else {
+        turn_off();
+      }
+    } else {
+      /* if no wiper command to transmit then let's check the push button state */
+      if (pushState == HIGH) {
+        turn_on(LED_PUSH);
+      } else {
+        turn_off();
+      }
+    }
+  }
+}
+
+void turn_on(int pinNo) {
+  digitalWrite(pinNo, HIGH);
+}
+
+void turn_off() {
+  digitalWrite(LED_FORWARD, LOW);
+  digitalWrite(LED_BACKWARD, LOW);
+  digitalWrite(LED_LEFT, LOW);
+  digitalWrite(LED_RIGHT, LOW);
+  digitalWrite(LED_WIPE_LEFT, LOW);
+  digitalWrite(LED_WIPE_RIGHT, LOW);
+  digitalWrite(LED_PUSH, LOW);
+}
+
