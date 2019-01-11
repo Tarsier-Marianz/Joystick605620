@@ -98,8 +98,10 @@ void command() {
     if (Z_val > (wiperMiddlePoint + wiperThreshold) || Z_val < (wiperMiddlePoint - wiperThreshold)) {
       if (Z_val > (wiperMiddlePoint + wiperThreshold)) {
         turn_on(LED_WIPE_RIGHT);
+        Serial.println("WR");
       } else if (Z_val < (wiperMiddlePoint - wiperThreshold)) {
         turn_on(LED_WIPE_LEFT);
+        Serial.println("WL");
       } else {
         turn_off();
       }
@@ -107,6 +109,7 @@ void command() {
       /* if no wiper command to transmit then let's check the push button state */
       if (pushState == HIGH) {
         turn_on(LED_PUSH);
+        Serial.println("ON");
       } else {
         turn_off();
       }
